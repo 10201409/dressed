@@ -1,5 +1,5 @@
 /* Keeps the app working without internet. Bump CACHE when index.html changes so phones pick up the new version. */
-const CACHE = 'dressed-v1';
+const CACHE = 'dressed-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
