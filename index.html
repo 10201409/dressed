@@ -1,0 +1,1263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dressed</title>
+<meta name="description" content="Pick today's outfit from your own wardrobe.">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dressed">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: one centered column, large-title pages, translucent tab bar, bottom sheets for editing. System fonts and iOS-style controls. */
+:root {
+  --bg: #f2f2f7; --card: #ffffff; --fill: rgba(120,120,128,.12); --fill-2: rgba(120,120,128,.2);
+  --ink: #000000; --ink-2: rgba(60,60,67,.66); --ink-3: rgba(60,60,67,.32); --line: rgba(60,60,67,.16);
+  --bar: rgba(247,247,250,.82); --seg-on: #ffffff; --shadow: 0 .5px 1px rgba(0,0,0,.05), 0 8px 28px rgba(0,0,0,.06);
+  --accent-l: #0071e3; --accent-d: #0a84ff; --on-l: #ffffff; --on-d: #ffffff;
+  --accent: var(--accent-l); --on-accent: var(--on-l);
+  --red: #d70015; --green: #34c759;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tabh: 56px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000; --card: #1c1c1e; --fill: rgba(120,120,128,.24); --fill-2: rgba(120,120,128,.38);
+    --ink: #ffffff; --ink-2: rgba(235,235,245,.62); --ink-3: rgba(235,235,245,.3); --line: rgba(84,84,88,.6);
+    --bar: rgba(24,24,26,.82); --seg-on: #636366; --shadow: none;
+    --accent: var(--accent-d); --on-accent: var(--on-d); --red: #ff453a; --green: #30d158;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.4 var(--font);
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; min-height: 100dvh;
+}
+body.lock { overflow: hidden; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--accent); }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic.fill { fill: currentColor; }
+.ic.sm { width: 18px; height: 18px; }
+.ic.lg { width: 34px; height: 34px; stroke-width: 1.5; }
+
+.app {
+  max-width: 600px; margin: 0 auto; padding-block: max(14px, env(safe-area-inset-top)) 0;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+.view { padding-bottom: calc(var(--tabh) + env(safe-area-inset-bottom) + 32px); display: grid; gap: 14px; align-content: start; }
+.view.has-bar { padding-bottom: calc(var(--tabh) + env(safe-area-inset-bottom) + 96px); }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-top: 6px; }
+.head > div { min-width: 0; }
+.eyebrow { margin: 0 0 2px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -.022em; text-wrap: balance; }
+h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.015em; }
+.foot { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.cap-h { margin: 0 0 8px 16px; font-size: 13px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-2); }
+.cap-f { margin: 8px 16px 0; font-size: 13px; color: var(--ink-2); }
+
+.card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); }
+.card.pad { padding: 12px; }
+
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 22px;
+  border: 0; border-radius: 14px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; transition: opacity .15s, transform .15s;
+}
+.btn:active { opacity: .7; transform: scale(.985); }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.tint { background: var(--fill); color: var(--accent); }
+.btn.plain { background: transparent; color: var(--accent); min-height: 44px; padding: 0 12px; }
+.btn.danger { color: var(--red); }
+.btn.block { width: 100%; }
+.btn.grow { flex: 1; }
+.round { width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex: none; }
+.round:active { opacity: .7; }
+.link { background: none; border: 0; padding: 4px 0; color: var(--accent); font-size: 15px; font-weight: 500; }
+
+/* chips + segmented control */
+.chips { position: relative; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+.chip { flex: none; border: 0; background: var(--fill); border-radius: 999px; min-height: 36px; padding: 6px 14px; font-size: 15px; font-weight: 500; white-space: nowrap; }
+.chip.on { background: var(--accent); color: var(--on-accent); }
+.chip small { opacity: .6; font-size: 13px; margin-left: 4px; }
+.seg { display: flex; background: var(--fill); border-radius: 10px; padding: 2px; }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 8px; padding: 7px 8px; font-size: 14px; font-weight: 500; min-height: 34px; }
+.seg button[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--seg-on); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 .5px 1px rgba(0,0,0,.1); }
+.sect-label { margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+
+/* weather */
+.wx { padding: 16px 18px 10px; display: grid; gap: 8px; }
+.wx-top { display: flex; align-items: center; gap: 14px; }
+.wx-temp { font-size: 56px; line-height: 1; font-weight: 300; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.wx-txt { flex: 1; min-width: 0; }
+.wx-cond { font-size: 17px; font-weight: 600; line-height: 1.25; }
+.wx-sub { font-size: 13.5px; line-height: 1.4; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wx-ic { color: var(--accent); flex: none; }
+.wx-ic .ic { width: 44px; height: 44px; stroke-width: 1.5; }
+.wx-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.wx-foot > span { flex: none; display: inline-flex; gap: 16px; }
+.wx-foot .foot { padding-top: 4px; }
+.wx-edit { display: grid; gap: 12px; padding-top: 12px; border-top: .5px solid var(--line); }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--fill); border-radius: 12px; }
+.stepper button { width: 46px; height: 40px; border: 0; background: transparent; font-size: 22px; font-weight: 500; color: var(--accent); }
+.stepper b { min-width: 52px; text-align: center; font-size: 18px; font-variant-numeric: tabular-nums; }
+.sk { height: 88px; border-radius: 14px; background: linear-gradient(90deg, var(--fill), var(--fill-2), var(--fill)); background-size: 200% 100%; animation: sh 1.3s linear infinite; }
+@keyframes sh { to { background-position: -200% 0; } }
+
+/* outfit */
+.outfit { display: grid; gap: 12px; }
+.collage { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+.collage.c3 { grid-template-columns: repeat(3, 1fr); }
+.tile { position: relative; margin: 0; border-radius: 14px; overflow: hidden; background: var(--fill); aspect-ratio: 4 / 5; }
+.c3 .tile { aspect-ratio: 3 / 4; }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile figcaption { position: absolute; inset: auto 0 0 0; padding: 24px 9px 7px; font-size: 12px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.58)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.why { list-style: none; margin: 14px 4px 4px; padding: 0; display: grid; gap: 7px; }
+.why li { display: flex; gap: 10px; font-size: 15px; line-height: 1.35; color: var(--ink-2); }
+.why li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--accent); }
+.done-h { display: flex; align-items: center; gap: 8px; margin: 2px 4px 12px; font-weight: 600; font-size: 17px; }
+.done-h .ic { color: var(--green); }
+.actionbar { position: fixed; inset: auto 0 calc(var(--tabh) + env(safe-area-inset-bottom)) 0; z-index: 20; padding: 10px 16px; background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--line); }
+.actionbar .in { max-width: 600px; margin: 0 auto; display: flex; gap: 10px; }
+
+/* wardrobe */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 10px; }
+@media (min-width: 520px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+.it { display: grid; gap: 6px; padding: 0; border: 0; background: none; text-align: left; align-content: start; }
+.ph { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: var(--fill); }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.it.wash .ph img { opacity: .4; }
+.dot { position: absolute; right: 7px; bottom: 7px; width: 15px; height: 15px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.95), 0 1px 3px rgba(0,0,0,.3); }
+.badge { position: absolute; left: 6px; top: 6px; background: rgba(0,0,0,.62); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.star { position: absolute; right: 6px; top: 6px; color: #ffd60a; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+.star .ic { width: 18px; height: 18px; }
+.cap { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* grouped lists */
+.group { background: var(--card); border-radius: 14px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 10px 16px; border: 0; background: none; text-align: left; border-bottom: .5px solid var(--line); font-size: 17px; }
+.group > :last-child { border-bottom: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.row small { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+.row .val { color: var(--ink-2); font-size: 17px; }
+button.row:active { background: var(--fill); }
+.row.danger { color: var(--red); }
+.sw { position: relative; flex: none; width: 51px; height: 31px; border: 0; border-radius: 999px; background: var(--fill-2); transition: background .2s; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
+.sw[aria-checked="true"] { background: var(--green); }
+.sw[aria-checked="true"]::after { transform: translateX(20px); }
+.thumbs { display: flex; gap: 6px; flex: none; }
+.thumbs img { width: 36px; height: 46px; object-fit: cover; border-radius: 7px; background: var(--fill); }
+.drow { min-height: 66px; }
+.accents { display: flex; gap: 14px; padding: 14px 16px; flex-wrap: wrap; }
+.acc { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--c); position: relative; }
+.acc.on::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; box-shadow: 0 0 0 2.5px var(--ink-2); }
+
+/* empty states */
+.empty { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 36px 20px; }
+.empty .badge-ic { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: var(--accent); margin-bottom: 4px; }
+.empty p { margin: 0; color: var(--ink-2); max-width: 32ch; }
+.empty h2 { font-size: 22px; }
+
+/* tab bar */
+.tabs { position: fixed; inset: auto 0 0 0; z-index: 30; background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.tabs .in { max-width: 600px; margin: 0 auto; display: flex; height: var(--tabh); }
+.tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: none; color: var(--ink-2); font-size: 10.5px; font-weight: 500; }
+.tabs button.on { color: var(--accent); }
+.tabs .ic { width: 26px; height: 26px; }
+
+/* bottom sheet */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); opacity: 0; transition: opacity .25s; z-index: 50; }
+.sheet { position: fixed; inset: auto 0 0 0; z-index: 51; margin: 0 auto; max-width: 600px; max-height: 94dvh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 22px 22px 0 0; transform: translateY(105%); transition: transform .32s cubic-bezier(.2,.8,.2,1); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -10px 40px rgba(0,0,0,.18); }
+#sheetRoot.open .scrim { opacity: 1; }
+#sheetRoot.open .sheet { transform: none; }
+.grab { width: 38px; height: 5px; border-radius: 3px; background: var(--ink-3); margin: 8px auto 0; }
+.sheet-h { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 6px 8px 8px; background: var(--bg); }
+.sheet-h h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.sheet-h button:last-child { justify-self: end; }
+.sheet-h .strong { font-weight: 700; }
+.sheet-b { display: grid; gap: 22px; padding: 6px 16px 28px; }
+.photo { position: relative; aspect-ratio: 1; max-height: 42dvh; width: min(100%, 42dvh); margin: 0 auto; border-radius: 18px; overflow: hidden; background: var(--fill); }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo .chip { position: absolute; right: 10px; bottom: 10px; background: rgba(0,0,0,.6); color: #fff; }
+.field { width: 100%; border: 0; border-radius: 12px; background: var(--card); padding: 13px 16px; font-size: 17px; }
+.field::placeholder { color: var(--ink-3); }
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px 10px; padding: 16px; }
+.sw-c { aspect-ratio: 1; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(128,128,128,.45); position: relative; }
+.sw-c.on::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 0 2.5px var(--accent); }
+.tagbox { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--card); border-radius: 12px; padding: 10px 12px; }
+.tag { display: inline-flex; align-items: center; gap: 2px; background: var(--fill); border-radius: 999px; padding: 4px 4px 4px 12px; font-size: 15px; font-weight: 500; }
+.tag button { border: 0; background: none; width: 26px; height: 26px; display: grid; place-items: center; color: var(--ink-2); }
+.tagbox input { flex: 1; min-width: 110px; border: 0; background: none; font-size: 17px; padding: 6px 4px; outline: none; }
+.tagbox input::placeholder { color: var(--ink-3); }
+.sugg { margin-top: 10px; }
+.busy { padding: 56px 20px 64px; text-align: center; display: grid; gap: 8px; }
+.busy p { margin: 0; font-size: 17px; font-weight: 600; }
+.pick { display: grid; gap: 12px; padding: 4px 16px 24px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(var(--tabh) + env(safe-area-inset-bottom) + 84px); transform: translate(-50%, 16px); z-index: 80; max-width: calc(100% - 32px); background: rgba(44,44,46,.94); color: #fff; padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; text-align: center; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.5 18.5h9.2a3.9 3.9 0 0 0 .6-7.75A5.6 5.6 0 0 0 6.6 11.9a3.3 3.3 0 0 0 .9 6.6z"/></symbol>
+  <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7.5 15.5h9.2a3.6 3.6 0 0 0 .5-7.15A5.2 5.2 0 0 0 6.7 9.4a3 3 0 0 0 .8 6.1z"/><path d="M8.5 18.5l-.8 2M12.5 18.5l-.8 2M16.5 18.5l-.8 2"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7.5 15.5h9.2a3.6 3.6 0 0 0 .5-7.15A5.2 5.2 0 0 0 6.7 9.4a3 3 0 0 0 .8 6.1z"/><path d="M8.5 19h.01M12 20.5h.01M15.5 19h.01" stroke-width="3"/></symbol>
+  <symbol id="i-hanger" viewBox="0 0 24 24"><path d="M9.6 6.4a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.7V11"/><path d="M12 11L3.4 17.3a1.4 1.4 0 0 0 .8 2.6h15.6a1.4 1.4 0 0 0 .8-2.6L12 11z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M4 10.5h16M8.5 3.5v3.5M15.5 3.5v3.5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h8M16 7h4M4 12h3M11 12h9M4 17h10M18 17h2"/><circle cx="14" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="16" cy="17" r="2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5h3l1.4-2h7.2l1.4 2h3a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></symbol>
+  <symbol id="i-photos" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.4"/><path d="M3.5 16.5l4.7-4.4 4 3.7 3-2.6 5.3 4.6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+</svg>
+
+<div class="app"><main id="view" class="view" aria-live="polite"></main></div>
+
+<nav class="tabs" aria-label="Main"><div class="in">
+  <button data-act="tab" data-tab="today"><svg class="ic"><use href="#i-sun"/></svg>Today</button>
+  <button data-act="tab" data-tab="wardrobe"><svg class="ic"><use href="#i-hanger"/></svg>Wardrobe</button>
+  <button data-act="tab" data-tab="diary"><svg class="ic"><use href="#i-calendar"/></svg>Diary</button>
+  <button data-act="tab" data-tab="settings"><svg class="ic"><use href="#i-sliders"/></svg>Settings</button>
+</div></nav>
+
+<div id="sheetRoot"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<input id="fileLib" type="file" accept="image/*" multiple hidden>
+<input id="fileCam" type="file" accept="image/*" capture="environment" hidden>
+<input id="fileOne" type="file" accept="image/*" hidden>
+<input id="fileImport" type="file" accept="application/json,.json" hidden>
+
+<script>
+/* engine.js: colors, weather helpers and outfit suggestions. No DOM in here, so it can be tested on its own. */
+const Engine = (() => {
+  const CATS = [
+    { id: 'top',    label: 'Tops',        one: 'Top' },
+    { id: 'bottom', label: 'Bottoms',     one: 'Bottom' },
+    { id: 'dress',  label: 'Dresses',     one: 'Dress' },
+    { id: 'outer',  label: 'Jackets',     one: 'Jacket' },
+    { id: 'shoes',  label: 'Shoes',       one: 'Shoes' },
+    { id: 'acc',    label: 'Accessories', one: 'Accessory' }
+  ];
+  const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+
+  // hue is in degrees for colors that count as "colors"; null for neutrals (they go with everything)
+  const COLORS = [
+    { id: 'black',    name: 'Black',    hex: '#1c1c1e', hue: null },
+    { id: 'white',    name: 'White',    hex: '#f4f4f0', hue: null },
+    { id: 'grey',     name: 'Grey',     hex: '#8e8e93', hue: null },
+    { id: 'cream',    name: 'Cream',    hex: '#eadfc8', hue: null },
+    { id: 'tan',      name: 'Tan',      hex: '#c19a6b', hue: null },
+    { id: 'brown',    name: 'Brown',    hex: '#6f4a2f', hue: null },
+    { id: 'navy',     name: 'Navy',     hex: '#1f2c4d', hue: null },
+    { id: 'denim',    name: 'Denim',    hex: '#5878a8', hue: null },
+    { id: 'red',      name: 'Red',      hex: '#d92d2d', hue: 0 },
+    { id: 'burgundy', name: 'Burgundy', hex: '#7a1f3d', hue: 345 },
+    { id: 'pink',     name: 'Pink',     hex: '#f28cb1', hue: 335 },
+    { id: 'orange',   name: 'Orange',   hex: '#f28c28', hue: 28 },
+    { id: 'yellow',   name: 'Yellow',   hex: '#f4d03f', hue: 50 },
+    { id: 'olive',    name: 'Olive',    hex: '#6b6b2f', hue: 65 },
+    { id: 'green',    name: 'Green',    hex: '#3d9a58', hue: 135 },
+    { id: 'blue',     name: 'Blue',     hex: '#2f6fe0', hue: 220 },
+    { id: 'purple',   name: 'Purple',   hex: '#7e4fb8', hue: 275 }
+  ];
+  const COLOR = Object.fromEntries(COLORS.map(c => [c.id, c]));
+
+  /* ---------- color detection from photo pixels ---------- */
+  function rgb2lab(r, g, b) {
+    const f = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
+    const R = f(r), G = f(g), B = f(b);
+    const X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+    const Y = R * 0.2126 + G * 0.7152 + B * 0.0722;
+    const Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+    const t = v => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+    const fx = t(X), fy = t(Y), fz = t(Z);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+  const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const PAL_LAB = COLORS.map(c => ({ id: c.id, lab: rgb2lab(...hexRgb(c.hex)) }));
+  const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+
+  // data: RGBA bytes of a small square image. Looks mostly at the middle and
+  // gives less weight to pixels that look like the background around the edges.
+  function detectColor(data, w, h) {
+    let br = 0, bg = 0, bb = 0, bn = 0;
+    const ring = Math.max(2, Math.round(w * 0.06));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (x < ring || y < ring || x >= w - ring || y >= h - ring) {
+        const i = (y * w + x) * 4; br += data[i]; bg += data[i + 1]; bb += data[i + 2]; bn++;
+      }
+    }
+    const bgLab = rgb2lab(br / bn, bg / bn, bb / bn);
+    const votes = {};
+    const cx = (w - 1) / 2, cy = (h - 1) / 2, sigma = w * 0.28;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (data[i + 3] < 128) continue;
+      const lab = rgb2lab(data[i], data[i + 1], data[i + 2]);
+      let wt = Math.exp(-(((x - cx) ** 2 + (y - cy) ** 2) / (2 * sigma * sigma)));
+      if (d2(lab, bgLab) < 12 * 12) wt *= 0.25;
+      let best = null, bd = Infinity;
+      for (const p of PAL_LAB) { const d = d2(lab, p.lab); if (d < bd) { bd = d; best = p.id; } }
+      votes[best] = (votes[best] || 0) + wt;
+    }
+    let top = 'black', tv = -1;
+    for (const k in votes) if (votes[k] > tv) { tv = votes[k]; top = k; }
+    return top;
+  }
+
+  /* ---------- dates ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); };
+
+  /* ---------- weather ---------- */
+  function codeInfo(code) {
+    if (code === 0) return { label: 'Clear sky', icon: 'sun', wet: false, snow: false };
+    if (code === 1) return { label: 'Mostly clear', icon: 'sun', wet: false, snow: false };
+    if (code === 2) return { label: 'Partly cloudy', icon: 'cloud', wet: false, snow: false };
+    if (code === 3) return { label: 'Overcast', icon: 'cloud', wet: false, snow: false };
+    if (code === 45 || code === 48) return { label: 'Fog', icon: 'cloud', wet: false, snow: false };
+    if (code >= 51 && code <= 57) return { label: 'Drizzle', icon: 'rain', wet: true, snow: false };
+    if (code >= 61 && code <= 67) return { label: 'Rain', icon: 'rain', wet: true, snow: false };
+    if (code >= 71 && code <= 77) return { label: 'Snow', icon: 'snow', wet: true, snow: true };
+    if (code >= 80 && code <= 82) return { label: 'Rain showers', icon: 'rain', wet: true, snow: false };
+    if (code === 85 || code === 86) return { label: 'Snow showers', icon: 'snow', wet: true, snow: true };
+    if (code >= 95) return { label: 'Thunderstorm', icon: 'rain', wet: true, snow: false };
+    return { label: 'Cloudy', icon: 'cloud', wet: false, snow: false };
+  }
+
+  // Open-Meteo JSON -> our weather object. Every field is read defensively.
+  function parseForecast(j) {
+    const c = (j && j.current) || {}, d = (j && j.daily) || {};
+    const first = a => (Array.isArray(a) && a.length ? a[0] : undefined);
+    const num = v => (typeof v === 'number' && isFinite(v) ? v : undefined);
+    const temp = num(c.temperature_2m);
+    const fMax = num(first(d.apparent_temperature_max)) ?? num(first(d.temperature_2m_max)) ?? temp;
+    const fMin = num(first(d.apparent_temperature_min)) ?? num(first(d.temperature_2m_min)) ?? temp;
+    if (fMax === undefined || fMin === undefined) throw new Error('forecast has no temperatures');
+    const code = num(first(d.weather_code)) ?? num(c.weather_code) ?? 3;
+    const info = codeInfo(code);
+    const rain = num(first(d.precipitation_probability_max)) ?? 0;
+    const wind = Math.max(num(c.wind_speed_10m) ?? 0, num(first(d.wind_speed_10m_max)) ?? 0);
+    return {
+      source: 'live', temp: temp ?? (fMin + fMax) / 2,
+      hi: num(first(d.temperature_2m_max)) ?? fMax, lo: num(first(d.temperature_2m_min)) ?? fMin,
+      fMin, fMax, rain, code, label: info.label, icon: info.icon,
+      wet: info.wet || rain >= 50, snow: info.snow, wind, updated: Date.now()
+    };
+  }
+
+  // Typical Copenhagen highs and lows by month, used only when the forecast can't be reached.
+  const HI = [3, 3, 6, 11, 16, 19, 22, 22, 18, 13, 8, 5];
+  const LO = [-1, -1, 0, 3, 7, 11, 14, 14, 11, 8, 4, 1];
+  function estimateWeather(date) {
+    const m = date.getMonth(), hi = HI[m], lo = LO[m];
+    return {
+      source: 'estimate', temp: (hi + lo) / 2, hi, lo, fMin: lo, fMax: hi, rain: 0, code: 3,
+      label: 'Typical weather', icon: 'cloud', wet: false, snow: false, wind: 0, updated: Date.now(),
+      month: date.toLocaleString('en-GB', { month: 'long' })
+    };
+  }
+
+  const effectiveTemp = w => (w.fMin + w.fMax) / 2 - (w.wind >= 10 ? 2 : 0);
+
+  /* ---------- outfit logic ---------- */
+  const hd = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+
+  function colorScore(parts) {
+    const chrom = [];
+    let navy = false, black = false;
+    for (const { item, w } of parts) {
+      const c = COLOR[item.color]; if (!c) continue;
+      if (c.id === 'navy') navy = true;
+      if (c.id === 'black') black = true;
+      if (c.hue !== null) chrom.push({ c, w });
+    }
+    const uniq = [...new Map(chrom.map(x => [x.c.id, x])).values()];
+    let s = 0, note;
+    if (uniq.length === 0) { s += 1; note = { kind: 'neutral' }; }
+    else if (uniq.length === 1) { s += 1.6; note = { kind: 'pop', a: uniq[0].c }; }
+    else if (uniq.length === 2) {
+      const [A, B] = uniq, d = hd(A.c.hue, B.c.hue), f = Math.min(A.w, B.w);
+      if (d <= 25) { s += 1.2; note = { kind: 'tone', a: A.c, b: B.c }; }
+      else if (d <= 70) { s -= 1.8 * f; note = { kind: 'clash', a: A.c, b: B.c }; }
+      else if (d <= 115) { s -= 0.3 * f; note = { kind: 'ok', a: A.c, b: B.c }; }
+      else { s += 0.9; note = { kind: 'comp', a: A.c, b: B.c }; }
+    } else { s -= 3; note = { kind: 'busy' }; }
+    if (navy && black) s -= 1;
+    return { score: s, note };
+  }
+
+  function recency(days) {
+    if (days === null) return 1;
+    if (days <= 1) return -3.5;
+    if (days === 2) return -2;
+    if (days === 3) return -1.2;
+    if (days <= 6) return -0.4;
+    return Math.min((days - 6) / 14, 1);
+  }
+
+  // How much insulation the outfit should add up to for a given "feels like" temperature.
+  function needed(eff) {
+    if (eff >= 24) return 1.5;
+    if (eff >= 20) return 2;
+    if (eff >= 16) return 3;
+    if (eff >= 12) return 4;
+    if (eff >= 8) return 5;
+    if (eff >= 4) return 6;
+    if (eff >= 0) return 7;
+    return 8;
+  }
+
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const labelOf = it => it.name || `${(COLOR[it.color] || { name: '' }).name} ${CAT[it.category].one.toLowerCase()}`.trim();
+
+  function lastWorn(history) {
+    const m = {};
+    for (const h of history) for (const id of h.ids) if (!m[id] || h.date > m[id]) m[id] = h.date;
+    return m;
+  }
+
+  function suggest({ items, history, weather, tag, seed, today, count = 3 }) {
+    const eff = effectiveTemp(weather), wet = !!weather.wet;
+    const avail = items.filter(i => !i.wash);
+    const by = c => avail.filter(i => i.category === c);
+    const tops = by('top'), bottoms = by('bottom'), dresses = by('dress'),
+          outers = by('outer'), shoes = by('shoes'), accs = by('acc');
+    const canTB = tops.length > 0 && bottoms.length > 0;
+    if (!canTB && !dresses.length) {
+      let need;
+      if (!tops.length && !bottoms.length) need = 'a top and a bottom, or a dress';
+      else if (!tops.length) need = 'a top';
+      else need = 'a bottom';
+      return { ok: false, need };
+    }
+
+    const r = rng(seed);
+    const last = lastWorn(history), tNum = dayNum(today);
+    const daysFor = it => (last[it.id] ? tNum - dayNum(last[it.id]) : null);
+    const needOuter = outers.length > 0 && (eff < 14 || (wet && eff < 24));
+    const noOuter = eff >= 20 && !wet;
+
+    const cache = new Map();
+    const solo = (it, role) => {
+      const k = it.id + role;
+      if (cache.has(k)) return cache.get(k);
+      const W = { base: 1, outer: 0.25, shoes: 0.35, acc: 0.3 }[role];
+      let s = recency(daysFor(it)) * W;
+      if (it.fav) s += role === 'base' ? 0.8 : 0.3;
+      if (tag) s += (it.tags || []).includes(tag) ? (role === 'base' ? 1.5 : 0.5) : (role === 'base' ? -0.8 : 0);
+      if (wet && role === 'shoes') s += it.wp ? 1.5 : -0.6;
+      if (wet && role === 'outer') s += it.wp ? 2.5 : -1;
+      if (role === 'acc' && eff < 8 && it.warmth === 3) s += 1.5;
+      cache.set(k, s);
+      return s;
+    };
+    const pick = (list, role) => {
+      const w = list.map(it => Math.exp(solo(it, role) / 2.2));
+      let t = r() * w.reduce((a, b) => a + b, 0);
+      for (let i = 0; i < list.length; i++) { t -= w[i]; if (t <= 0) return list[i]; }
+      return list[list.length - 1];
+    };
+
+    const wv = it => (it ? it.warmth || 2 : 0);
+    const seen = new Map();
+    for (let n = 0; n < 700; n++) {
+      const useDress = dresses.length && (!canTB || r() < 0.28);
+      let top = null, bottom = null, dress = null;
+      if (useDress) dress = pick(dresses, 'base'); else { top = pick(tops, 'base'); bottom = pick(bottoms, 'base'); }
+      let outer = null;
+      if (outers.length) {
+        if (needOuter) outer = pick(outers, 'outer');
+        else if (!noOuter && r() < 0.5) outer = pick(outers, 'outer');
+      }
+      const shoe = shoes.length ? pick(shoes, 'shoes') : null;
+      let acc = null;
+      if (eff < 6) {
+        const warm = accs.filter(a => a.warmth === 3);
+        if (warm.length && r() < 0.9) acc = pick(warm, 'acc');
+        else if (accs.length && r() < 0.4) acc = pick(accs, 'acc');
+      } else {
+        const pool = eff >= 12 ? accs.filter(a => a.warmth !== 3) : accs;
+        if (pool.length && r() < 0.5) acc = pick(pool, 'acc');
+      }
+      const key = [top, bottom, dress, outer, shoe, acc].filter(Boolean).map(i => i.id).join('|');
+      if (seen.has(key)) continue;
+
+      let score = 0;
+      // average the base pieces so a dress (one piece) competes fairly with a top plus a bottom
+      const baseParts = [top, bottom, dress].filter(Boolean);
+      score += (baseParts.reduce((s, it) => s + solo(it, 'base'), 0) / baseParts.length) * 1.5;
+      if (outer) score += solo(outer, 'outer');
+      if (shoe) score += solo(shoe, 'shoes');
+      if (acc) score += solo(acc, 'acc');
+
+      let insul = dress ? 1.5 * wv(dress) : wv(top) + 0.5 * wv(bottom);
+      insul += wv(outer);
+      if (acc && acc.warmth === 3 && eff < 8) insul += 0.5;
+      const diff = insul - needed(eff);
+      score -= diff < 0 ? -diff * 2.2 : diff * 1.2;
+      if (noOuter && outer) score -= 3;
+
+      const parts = [];
+      for (const it of [top, bottom, dress, outer]) if (it) parts.push({ item: it, w: 1 });
+      if (shoe) parts.push({ item: shoe, w: 0.5 });
+      if (acc) parts.push({ item: acc, w: 0.5 });
+      const cs = colorScore(parts);
+      score += cs.score + r() * 0.35;
+
+      seen.set(key, { top, bottom, dress, outer, shoes: shoe, acc, score, note: cs.note, key });
+    }
+
+    const cands = [...seen.values()].sort((a, b) => b.score - a.score);
+    const baseIds = c => (c.dress ? [c.dress.id] : [c.top.id, c.bottom.id]);
+    const chosen = [];
+    const pass = ok => {
+      for (const c of cands) {
+        if (chosen.length >= count) break;
+        if (!chosen.includes(c) && ok(c)) chosen.push(c);
+      }
+    };
+    pass(c => chosen.every(o => !baseIds(c).some(id => baseIds(o).includes(id))));
+    pass(c => chosen.every(o => baseIds(c).join() !== baseIds(o).join()));
+    pass(() => true);
+
+    const ctx = { eff, wet, tag, daysFor, hasHistory: history.length > 0 };
+    for (const o of chosen) {
+      o.items = [o.dress, o.top, o.bottom, o.outer, o.shoes, o.acc].filter(Boolean);
+      o.reasons = explain(o, ctx);
+    }
+    return { ok: true, list: chosen, eff, wet };
+  }
+
+  function explain(o, { eff, wet, tag, daysFor, hasHistory }) {
+    const out = [], t = Math.round(eff);
+    if (eff >= 24) out.push(`Light and cool for ${t}°`);
+    else if (eff >= 18) out.push(`Comfortable at ${t}°`);
+    else if (o.outer) out.push(`${['', 'Light', 'Mid-weight', 'Warm'][o.outer.warmth || 2]} jacket for ${t}°`);
+    else out.push(`Dressed for ${t}°`);
+
+    if (wet) {
+      const p = [];
+      if (o.outer && o.outer.wp) p.push('jacket');
+      if (o.shoes && o.shoes.wp) p.push('shoes');
+      if (p.length) out.push(`Rain-proof ${p.join(' and ')} for the wet weather`);
+    }
+
+    const n = o.note || {};
+    if (n.kind === 'neutral') out.push('Neutral colors that always go together');
+    else if (n.kind === 'pop') out.push(`${n.a.name} stands out against the neutrals`);
+    else if (n.kind === 'tone') out.push(`${n.a.name} and ${n.b.name} are close shades`);
+    else if (n.kind === 'comp') out.push(`${n.a.name} and ${n.b.name} are complementary`);
+    else if (n.kind === 'ok') out.push(`${n.a.name} and ${n.b.name} work together`);
+    else if (n.kind === 'clash') out.push(`${n.a.name} and ${n.b.name} are close, so it may feel busy`);
+    else if (n.kind === 'busy') out.push('Lots of colors, so it may look busy');
+
+    const base = [o.top, o.bottom, o.dress].filter(Boolean);
+    let pickIt = null, pickDays = -1;
+    for (const it of base) {
+      const d = daysFor(it);
+      const v = d === null ? Infinity : d;
+      if (v > pickDays) { pickDays = v; pickIt = it; }
+    }
+    if (pickIt && hasHistory) {
+      if (pickDays === Infinity) out.push(`${labelOf(pickIt)} hasn't been worn yet`);
+      else if (pickDays >= 7) out.push(`${labelOf(pickIt)} was last worn ${pickDays} days ago`);
+    }
+    if (tag && base.length && base.every(it => (it.tags || []).includes(tag))) out.push(`Fits your "${tag}" tag`);
+    return out.slice(0, 4);
+  }
+
+  return { CATS, CAT, COLORS, COLOR, detectColor, dateStr, dayNum, codeInfo, parseForecast, estimateWeather,
+           effectiveTemp, suggest, labelOf, lastWorn, needed, rng };
+})();
+if (typeof module !== 'undefined') module.exports = Engine;
+
+/* app.js: screens, storage, photos, weather, backup. Uses Engine from engine.js. */
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ic = (n, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const { CATS, CAT, COLORS, COLOR } = Engine;
+const todayStr = () => Engine.dateStr(new Date());
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked: fine */ } }
+};
+
+/* ---------- storage (IndexedDB, with an in-memory fallback so the app still runs) ---------- */
+const DB = (() => {
+  let db = null, useMem = false;
+  const mem = { items: new Map(), history: new Map() };
+  const keyOf = { items: 'id', history: 'date' };
+  const open = () => new Promise(res => {
+    if (!('indexedDB' in window)) { useMem = true; return res(false); }
+    let req;
+    try { req = indexedDB.open('dressed', 1); } catch (e) { useMem = true; return res(false); }
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('items', { keyPath: 'id' });
+      req.result.createObjectStore('history', { keyPath: 'date' });
+    };
+    req.onsuccess = () => { db = req.result; res(true); };
+    req.onerror = () => { useMem = true; res(false); };
+    req.onblocked = () => { useMem = true; res(false); };
+  });
+  const run = (s, mode, fn) => new Promise((res, rej) => {
+    const t = db.transaction(s, mode), r = fn(t.objectStore(s));
+    t.oncomplete = () => res(r ? r.result : undefined);
+    t.onerror = t.onabort = () => rej(t.error);
+  });
+  return {
+    open, get memory() { return useMem; },
+    all: s => (useMem ? Promise.resolve([...mem[s].values()]) : run(s, 'readonly', o => o.getAll())),
+    put: (s, v) => (useMem ? (mem[s].set(v[keyOf[s]], v), Promise.resolve()) : run(s, 'readwrite', o => o.put(v))),
+    del: (s, k) => (useMem ? (mem[s].delete(k), Promise.resolve()) : run(s, 'readwrite', o => o.delete(k))),
+    clear: s => (useMem ? (mem[s].clear(), Promise.resolve()) : run(s, 'readwrite', o => o.clear()))
+  };
+})();
+
+/* ---------- state ---------- */
+const S = {
+  tab: 'today', items: [], history: [], wx: null, wxState: 'loading', wxEdit: false, ov: null,
+  tag: null, shuffle: 0, sug: null, idx: 0, cat: 'all', wtag: null, queue: [], queueTotal: 0,
+  day: todayStr(), installEvt: null, confirmReset: false, persisted: null
+};
+let E = null; // the item being edited in the sheet
+
+const ACCENTS = {
+  blue:   { name: 'Blue',   l: '#0071e3', d: '#0a84ff', ol: '#ffffff', od: '#ffffff' },
+  pink:   { name: 'Pink',   l: '#d30f45', d: '#ff375f', ol: '#ffffff', od: '#ffffff' },
+  purple: { name: 'Purple', l: '#8944ab', d: '#bf5af2', ol: '#ffffff', od: '#ffffff' },
+  green:  { name: 'Green',  l: '#248a3d', d: '#30d158', ol: '#ffffff', od: '#000000' },
+  orange: { name: 'Orange', l: '#c93400', d: '#ff9f0a', ol: '#ffffff', od: '#000000' },
+  teal:   { name: 'Teal',   l: '#008299', d: '#40c8e0', ol: '#ffffff', od: '#000000' }
+};
+function applyAccent() {
+  const a = ACCENTS[store.get('dressed.accent')] || ACCENTS.blue, s = document.documentElement.style;
+  s.setProperty('--accent-l', a.l); s.setProperty('--accent-d', a.d);
+  s.setProperty('--on-l', a.ol); s.setProperty('--on-d', a.od);
+}
+
+/* ---------- photos ---------- */
+const urls = new Map();
+function urlsFor(it) {
+  if (!it.photo) return { photo: '', thumb: '' };
+  let u = urls.get(it.id);
+  if (!u || u.src !== it.photo) {
+    if (u) { URL.revokeObjectURL(u.photo); URL.revokeObjectURL(u.thumb); }
+    u = { src: it.photo, photo: URL.createObjectURL(it.photo), thumb: URL.createObjectURL(it.thumb || it.photo) };
+    urls.set(it.id, u);
+  }
+  return u;
+}
+function dropUrls(id) { const u = urls.get(id); if (u) { URL.revokeObjectURL(u.photo); URL.revokeObjectURL(u.thumb); urls.delete(id); } }
+function dropAllUrls() { for (const id of [...urls.keys()]) dropUrls(id); }
+
+async function decode(file) {
+  if ('createImageBitmap' in window) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { /* use the slower route */ }
+  }
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); };
+    im.src = u;
+  });
+}
+function scaleTo(img, max) {
+  const w = img.width || img.naturalWidth, h = img.height || img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(img, 0, 0, cv.width, cv.height);
+  return cv;
+}
+function probe(img) {
+  const w = img.width || img.naturalWidth, h = img.height || img.naturalHeight, s = Math.min(w, h);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 48;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 48, 48);
+  ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, 48, 48);
+  return ctx.getImageData(0, 0, 48, 48);
+}
+const toBlob = (cv, q) => new Promise((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('blob'))), 'image/jpeg', q));
+async function prepare(file) {
+  const img = await decode(file);
+  const blob = await toBlob(scaleTo(img, 900), 0.82);
+  const thumb = await toBlob(scaleTo(img, 360), 0.8);
+  const px = probe(img);
+  const color = Engine.detectColor(px.data, px.width, px.height);
+  if (img.close) img.close();
+  return { blob, thumb, color };
+}
+const blobToDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+function dataURLToBlob(u) {
+  const [head, body] = u.split(','), mime = (head.match(/:(.*?);/) || [])[1] || 'image/jpeg', bin = atob(body), a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return new Blob([a], { type: mime });
+}
+
+/* ---------- weather ---------- */
+const WX_URL = 'https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57' +
+  '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m' +
+  '&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_probability_max,weather_code,wind_speed_10m_max' +
+  '&timezone=Europe%2FCopenhagen&forecast_days=1&wind_speed_unit=ms';
+const hhmm = t => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+async function loadWeather(force) {
+  let cached = null;
+  try { cached = JSON.parse(store.get('dressed.wx') || 'null'); } catch (e) { /* ignore */ }
+  const fresh = cached && cached.date === todayStr();
+  if (!force && fresh && Date.now() - cached.updated < 45 * 60e3) { S.wx = cached; S.wxState = 'ready'; recompute(); render(); return; }
+  S.wxState = 'loading'; if (!S.wx) render();
+  try {
+    const ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 9000);
+    const r = await fetch(WX_URL, { signal: ctrl.signal });
+    clearTimeout(to);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const wx = Engine.parseForecast(await r.json());
+    wx.date = todayStr();
+    store.set('dressed.wx', JSON.stringify(wx));
+    S.wx = wx; S.wxState = 'ready';
+  } catch (e) {
+    if (fresh) { S.wx = cached; S.wxState = 'ready'; }
+    else { S.wx = Engine.estimateWeather(new Date()); S.wxState = 'offline'; }
+  }
+  S.ov = null; recompute(); render();
+}
+function curWx() {
+  if (!S.wx) return null;
+  if (!S.ov) return S.wx;
+  return { ...S.wx, source: 'manual', fMin: S.ov.feels, fMax: S.ov.feels, wet: S.ov.cond !== 'dry', snow: S.ov.cond === 'snow', wind: 0, rain: S.ov.cond === 'dry' ? 0 : 100 };
+}
+
+/* ---------- derived data ---------- */
+function allTags() {
+  const m = new Map();
+  for (const it of S.items) for (const t of it.tags || []) m.set(t, (m.get(t) || 0) + 1);
+  return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(e => e[0]);
+}
+function recompute() {
+  const wx = curWx();
+  if (!wx) { S.sug = null; return; }
+  S.sug = Engine.suggest({
+    items: S.items, history: S.history.filter(h => h.date !== todayStr()), weather: wx, tag: S.tag,
+    seed: Engine.dayNum(todayStr()) * 7 + S.shuffle, today: todayStr()
+  });
+  S.idx = 0;
+}
+function todaysOutfit() {
+  const h = S.history.find(x => x.date === todayStr());
+  if (!h) return null;
+  const items = h.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean);
+  return items.length ? { rec: h, items } : null;
+}
+function dayLabel(d) {
+  const t = todayStr(), y = Engine.dateStr(new Date(Date.now() - 86400000));
+  if (d === t) return 'Today';
+  if (d === y) return 'Yesterday';
+  const [Y, M, D] = d.split('-').map(Number);
+  return new Date(Y, M - 1, D).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/* ---------- views ---------- */
+function collage(items) {
+  const n = items.length, cols = n === 3 || n >= 5 ? 'c3' : 'c2';
+  return `<div class="collage ${cols}">${items.map(it => {
+    const l = esc(Engine.labelOf(it));
+    return `<figure class="tile"><img src="${urlsFor(it).photo}" alt="${l}"><figcaption>${l}</figcaption></figure>`;
+  }).join('')}</div>`;
+}
+
+function weatherCard() {
+  const wx = curWx();
+  if (!wx) return `<section class="card wx" aria-label="Weather"><div class="sk"></div><p class="foot">Checking Copenhagen weather</p></section>`;
+  const eff = Math.round(Engine.effectiveTemp(wx));
+  let big, cond, icon;
+  if (S.ov) { big = S.ov.feels; cond = { dry: 'Dry', rain: 'Rain', snow: 'Snow' }[S.ov.cond]; icon = S.ov.cond === 'snow' ? 'snow' : S.ov.cond === 'rain' ? 'rain' : 'sun'; }
+  else if (wx.source === 'estimate') { big = Math.round((wx.fMin + wx.fMax) / 2); cond = `Typical for ${wx.month}`; icon = 'cloud'; }
+  else { big = Math.round(wx.temp); cond = wx.label; icon = wx.icon; }
+  let sub = '';
+  if (wx.source === 'live') {
+    sub = `<div class="wx-sub">Feels ${eff}° · H ${Math.round(wx.hi)}° L ${Math.round(wx.lo)}°</div>` +
+      `<div class="wx-sub">Rain ${Math.round(wx.rain)}% · Wind ${Math.round(wx.wind)} m/s</div>`;
+  } else if (wx.source === 'estimate') {
+    sub = `<div class="wx-sub">H ${Math.round(wx.hi)}° L ${Math.round(wx.lo)}°</div>`;
+  }
+  let note;
+  if (S.ov) note = 'Set by you';
+  else if (wx.source === 'estimate') note = "Can't reach the forecast, so this is a typical day. Tap Edit to set today's weather.";
+  else note = `Copenhagen · updated ${hhmm(wx.updated)}`;
+  const edit = S.wxEdit ? `
+    <div class="wx-edit">
+      <div class="row-between"><span>Feels like</span>
+        <div class="stepper"><button data-act="wx-dec" aria-label="Colder">&minus;</button><b>${S.ov ? S.ov.feels : eff}°</b><button data-act="wx-inc" aria-label="Warmer">+</button></div></div>
+      <div class="seg" role="group" aria-label="Conditions">${['dry', 'rain', 'snow'].map(c =>
+        `<button data-act="wx-cond" data-c="${c}" aria-pressed="${(S.ov ? S.ov.cond : wx.snow ? 'snow' : wx.wet ? 'rain' : 'dry') === c}">${{ dry: 'Dry', rain: 'Rain', snow: 'Snow' }[c]}</button>`).join('')}</div>
+      ${S.ov && S.wxState !== 'offline' ? '<button class="btn plain" data-act="wx-reset">Use the forecast</button>' : ''}
+    </div>` : '';
+  return `<section class="card wx" aria-label="Weather">
+    <div class="wx-top"><div class="wx-temp">${big}°</div><div class="wx-txt"><div class="wx-cond">${esc(cond)}</div>${sub}</div><div class="wx-ic">${ic(icon)}</div></div>
+    <div class="wx-foot"><p class="foot">${esc(note)}</p>
+      <span>${S.wxState === 'offline' ? '<button class="link" data-act="wx-retry">Try again</button> ' : ''}<button class="link" data-act="wx-edit">${S.wxEdit ? 'Done' : 'Edit'}</button></span></div>
+    ${edit}</section>`;
+}
+
+function emptyWardrobe() {
+  return `<section class="empty">
+    <div class="badge-ic">${ic('hanger', 'lg')}</div>
+    <h2>Start with your wardrobe</h2>
+    <p>Add photos of your clothes once. Each morning you get up to three outfits that fit the weather and the colors.</p>
+    <button class="btn primary" data-act="add">${ic('plus', 'sm')}Add clothes</button>
+  </section>`;
+}
+
+function viewToday() {
+  const now = new Date(), hr = now.getHours();
+  const greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const date = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  let h = `<header class="head"><div><p class="eyebrow">${esc(date)}</p><h1>${greet}</h1></div></header>`;
+  h += weatherCard();
+  if (!S.items.length) return h + emptyWardrobe();
+
+  const done = todaysOutfit();
+  if (done) {
+    return h + `<section class="card pad"><div class="done-h">${ic('check')}Today's outfit</div>${collage(done.items)}</section>
+      <button class="btn tint block" data-act="undo">Change today's outfit</button>`;
+  }
+
+  const tags = allTags();
+  if (tags.length) {
+    h += `<section><p class="sect-label">Occasion</p><div class="chips">
+      <button class="chip ${!S.tag ? 'on' : ''}" data-act="occ" data-tag="">Anything</button>
+      ${tags.map(t => `<button class="chip ${S.tag === t ? 'on' : ''}" data-act="occ" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></section>`;
+  }
+  if (!S.sug) return h;
+  if (!S.sug.ok) {
+    return h + `<section class="empty"><div class="badge-ic">${ic('hanger', 'lg')}</div><h2>Add a few more pieces</h2>
+      <p>I need ${esc(S.sug.need)} that isn't in the wash to put an outfit together.</p>
+      <button class="btn primary" data-act="add">${ic('plus', 'sm')}Add clothes</button></section>`;
+  }
+  const list = S.sug.list, o = list[S.idx] || list[0];
+  const seg = list.length > 1
+    ? `<div class="seg" role="tablist" aria-label="Outfit options">${list.map((_, i) =>
+        `<button role="tab" aria-selected="${i === S.idx}" data-act="opt" data-i="${i}">Option ${i + 1}</button>`).join('')}</div>`
+    : `<p class="foot">Only one outfit fits right now. Add more clothes to get more choices.</p>`;
+  h += `<section class="outfit">${seg}
+    <div class="card pad">${collage(o.items)}<ul class="why">${o.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>
+    ${list.length > 1 ? '<button class="btn tint block" data-act="shuffle">Show different outfits</button>' : ''}
+  </section>
+  <div class="actionbar"><div class="in"><button class="btn primary grow" data-act="approve">${ic('check', 'sm')}Wear this today</button></div></div>`;
+  return h;
+}
+
+function viewWardrobe() {
+  const counts = {};
+  S.items.forEach(i => { counts[i.category] = (counts[i.category] || 0) + 1; });
+  const list = S.items.filter(i => (S.cat === 'all' || i.category === S.cat) && (!S.wtag || (i.tags || []).includes(S.wtag)))
+    .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+  const tags = allTags();
+  let h = `<header class="head"><div><p class="eyebrow">${S.items.length} item${S.items.length === 1 ? '' : 's'}</p><h1>Wardrobe</h1></div>
+    <button class="round" data-act="add" aria-label="Add clothes">${ic('plus')}</button></header>`;
+  if (!S.items.length) return h + emptyWardrobe();
+  h += `<div class="chips" aria-label="Category">
+    <button class="chip ${S.cat === 'all' ? 'on' : ''}" data-act="cat" data-cat="all">All</button>
+    ${CATS.map(c => `<button class="chip ${S.cat === c.id ? 'on' : ''}" data-act="cat" data-cat="${c.id}">${c.label}<small>${counts[c.id] || 0}</small></button>`).join('')}</div>`;
+  if (tags.length) {
+    h += `<div class="chips" aria-label="Tags"><button class="chip ${!S.wtag ? 'on' : ''}" data-act="wtag" data-tag="">All tags</button>
+      ${tags.map(t => `<button class="chip ${S.wtag === t ? 'on' : ''}" data-act="wtag" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
+  }
+  if (!list.length) return h + `<section class="empty"><p>Nothing here yet.</p></section>`;
+  h += `<div class="grid">${list.map(it => `
+    <button class="it ${it.wash ? 'wash' : ''}" data-act="edit" data-id="${it.id}" aria-label="${esc(Engine.labelOf(it))}">
+      <span class="ph"><img loading="lazy" src="${urlsFor(it).thumb}" alt="">
+        <span class="dot" style="background:${(COLOR[it.color] || COLORS[0]).hex}"></span>
+        ${it.fav ? `<span class="star">${ic('star', 'fill')}</span>` : ''}${it.wash ? '<span class="badge">In the wash</span>' : ''}</span>
+      <span class="cap">${esc(Engine.labelOf(it))}</span></button>`).join('')}</div>`;
+  return h;
+}
+
+function viewDiary() {
+  const rows = S.history.map(h => ({ h, items: h.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean) }))
+    .filter(r => r.items.length).sort((a, b) => (a.h.date < b.h.date ? 1 : -1)).slice(0, 90);
+  let h = `<header class="head"><div><p class="eyebrow">${rows.length} day${rows.length === 1 ? '' : 's'}</p><h1>Diary</h1></div></header>`;
+  if (!rows.length) {
+    return h + `<section class="empty"><div class="badge-ic">${ic('calendar', 'lg')}</div><h2>Nothing yet</h2>
+      <p>Outfits you pick on the Today tab show up here, so you can see what you wore and when.</p></section>`;
+  }
+  return h + `<div class="group">${rows.map(r => `
+    <button class="row drow" data-act="diary-open" data-date="${r.h.date}">
+      <span class="grow">${dayLabel(r.h.date)}<small>${typeof r.h.temp === 'number' ? r.h.temp + '°' : ''}${r.h.wet ? ' · wet' : ''}</small></span>
+      <span class="thumbs">${r.items.slice(0, 4).map(it => `<img src="${urlsFor(it).thumb}" alt="">`).join('')}</span>
+      ${ic('chev', 'sm')}</button>`).join('')}</div>`;
+}
+
+function viewSettings() {
+  const cur = store.get('dressed.accent') || 'blue';
+  const standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches;
+  const install = standalone ? `<div class="row"><span class="grow">Installed on this device</span>${ic('check', 'sm')}</div>`
+    : S.installEvt ? `<button class="row" data-act="install"><span class="grow">Install Dressed on this device<small>Opens like a normal app, with its own icon</small></span>${ic('chev', 'sm')}</button>`
+    : `<div class="row"><span class="grow">Install on this device<small>Chrome: open the menu and choose Add to Home screen or Install app</small></span></div>`;
+  const n = S.items.length, d = S.history.length;
+  return `<header class="head"><div><p class="eyebrow">Dressed</p><h1>Settings</h1></div></header>
+  <section><p class="cap-h">Accent color</p><div class="group"><div class="accents">${Object.entries(ACCENTS).map(([k, a]) =>
+    `<button class="acc ${k === cur ? 'on' : ''}" style="--c:${a.l}" data-act="accent" data-k="${k}" aria-label="${a.name}" aria-pressed="${k === cur}"></button>`).join('')}</div></div></section>
+  <section><p class="cap-h">Weather</p><div class="group">
+    <div class="row"><span class="grow">Location</span><span class="val">Copenhagen</span></div>
+    <button class="row" data-act="wx-refresh"><span class="grow">Refresh forecast</span>${ic('chev', 'sm')}</button></div>
+    <p class="cap-f">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>. This is the only thing the app sends over the internet.</p></section>
+  <section><p class="cap-h">Your data</p><div class="group">
+    <div class="row"><span class="grow">${n} item${n === 1 ? '' : 's'}, ${d} day${d === 1 ? '' : 's'} in the diary<small>${DB.memory ? 'Not being saved in this browser mode' : S.persisted === true ? 'Protected from automatic clean-up' : 'Stored on this device only'}</small></span></div>
+    <button class="row" data-act="export"><span class="grow">Back up wardrobe<small>Saves one file with all photos and tags</small></span>${ic('chev', 'sm')}</button>
+    <button class="row" data-act="import"><span class="grow">Restore from a backup<small>Use this to move your wardrobe to another device</small></span>${ic('chev', 'sm')}</button></div>
+    <p class="cap-f">Photos stay on this device. There is no account and no cloud copy, so make a backup now and then.</p></section>
+  <section><p class="cap-h">App</p><div class="group">${install}</div></section>
+  <section><div class="group"><button class="row danger" data-act="reset">${S.confirmReset ? 'Tap again to delete everything' : 'Delete everything'}</button></div></section>`;
+}
+
+function render() {
+  const v = $('#view');
+  v.innerHTML = { today: viewToday, wardrobe: viewWardrobe, diary: viewDiary, settings: viewSettings }[S.tab]();
+  v.classList.toggle('has-bar', !!v.querySelector('.actionbar'));
+  document.querySelectorAll('.tabs button').forEach(b => {
+    const on = b.dataset.tab === S.tab; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  v.querySelectorAll('.chips').forEach(c => {
+    const on = c.querySelector('.chip.on');
+    if (on && on.offsetLeft > c.clientWidth - 80) c.scrollLeft = on.offsetLeft - c.clientWidth / 2 + on.offsetWidth / 2;
+  });
+}
+
+/* ---------- sheets ---------- */
+let pushed = false;
+function showSheet(html, keepScroll) {
+  const r = $('#sheetRoot');
+  let sh = r.querySelector('.sheet');
+  if (!sh) {
+    r.innerHTML = '<div class="scrim" data-act="sheet-close"></div><section class="sheet" role="dialog" aria-modal="true" aria-label="Details"><div class="grab"></div><div class="sheet-in"></div></section>';
+    sh = r.querySelector('.sheet'); void sh.offsetWidth;
+  }
+  r.classList.add('open'); document.body.classList.add('lock');
+  if (!pushed) { try { history.pushState({ sheet: 1 }, ''); pushed = true; } catch (e) { /* fine */ } }
+  const inn = sh.querySelector('.sheet-in'), st = sh.scrollTop;
+  inn.innerHTML = html; sh.scrollTop = keepScroll ? st : 0;
+}
+function freeE() { if (E && E.url) URL.revokeObjectURL(E.url); E = null; }
+function closeSheet(fromPop) {
+  const r = $('#sheetRoot');
+  if (!r.querySelector('.sheet')) return;
+  r.classList.remove('open'); document.body.classList.remove('lock');
+  setTimeout(() => { if (!r.classList.contains('open')) r.innerHTML = ''; }, 340);
+  if (!fromPop && pushed) { pushed = false; try { history.back(); } catch (e) { /* fine */ } } else pushed = false;
+  S.queue = []; freeE();
+}
+window.addEventListener('popstate', () => { if (pushed) { pushed = false; closeSheet(true); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !E) closeSheet(); });
+
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function addMenu() {
+  const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+  showSheet(`<div class="sheet-h"><span></span><h3>Add clothes</h3><button class="btn plain" data-act="sheet-close">Cancel</button></div>
+    <div class="pick"><div class="group">
+      <button class="row" data-act="add-lib">${ic('photos')}<span class="grow">Choose photos<small>Pick as many as you like</small></span>${ic('chev', 'sm')}</button>
+      ${touch ? `<button class="row" data-act="add-cam">${ic('camera')}<span class="grow">Take a photo</span>${ic('chev', 'sm')}</button>` : ''}</div>
+      <p class="foot">Tip: lay each piece flat on a plain surface in good light. The app reads the color from the middle of the photo.</p></div>`);
+}
+
+const DEFAULT_WARMTH = { top: 2, bottom: 2, dress: 2, outer: 2, shoes: 2, acc: 1 };
+const HINTS = {
+  top: 'Light: tee or tank. Medium: long sleeve or thin knit. Warm: thick sweater or hoodie.',
+  bottom: 'Light: shorts or a skirt. Medium: jeans or trousers. Warm: thick or lined.',
+  dress: 'Light: summer dress. Medium: everyday dress. Warm: knit or lined dress.',
+  outer: 'Light: thin jacket or cardigan. Medium: regular jacket. Warm: winter coat.'
+};
+
+async function startAdd(files) {
+  files = [...files]; if (!files.length) return;
+  showSheet(`<div class="busy"><p>Getting your photos ready</p><span class="foot" id="busyN">0 of ${files.length}</span></div>`);
+  const ok = []; let failed = 0;
+  for (let i = 0; i < files.length; i++) {
+    try { ok.push(await prepare(files[i])); } catch (e) { failed++; }
+    const n = $('#busyN'); if (n) n.textContent = `${i + 1} of ${files.length}`;
+  }
+  if (!ok.length) { closeSheet(); toast("Couldn't read those photos"); return; }
+  if (failed) toast(`${failed} photo${failed > 1 ? 's' : ''} couldn't be read`);
+  S.queue = ok; S.queueTotal = ok.length; S.lastCat = null;
+  nextInQueue();
+}
+function newE(p, pos) {
+  // photos usually come in batches of the same kind, so start from the last type picked
+  const cat = S.lastCat || (S.cat !== 'all' ? S.cat : 'top');
+  freeE();
+  E = { mode: 'add', id: uid(), photo: p.blob, thumb: p.thumb, url: URL.createObjectURL(p.blob), name: '', category: cat, color: p.color, autoColor: true,
+        warmth: DEFAULT_WARMTH[cat], warmTouched: false, wp: false, tags: [], fav: false, wash: false, pos, total: S.queueTotal, addedAt: Date.now() };
+}
+function nextInQueue() {
+  const p = S.queue.shift();
+  if (!p) { closeSheet(); return; }
+  newE(p, S.queueTotal - S.queue.length);
+  renderEditor(false);
+}
+function openEdit(id) {
+  const it = S.items.find(i => i.id === id); if (!it) return;
+  freeE();
+  E = { mode: 'edit', id: it.id, photo: it.photo, thumb: it.thumb, url: URL.createObjectURL(it.photo), name: it.name || '', category: it.category, color: it.color,
+        autoColor: false, warmth: it.warmth || 2, warmTouched: true, wp: !!it.wp, tags: [...(it.tags || [])], fav: !!it.fav, wash: !!it.wash, pos: 1, total: 1, addedAt: it.addedAt };
+  renderEditor(false);
+}
+function renderEditor(keep) { showSheet(editorHTML(), keep); }
+
+function editorHTML() {
+  const e = E, cat = e.category, c = COLOR[e.color] || COLORS[0], used = allTags();
+  const title = e.mode === 'edit' ? 'Edit item' : e.total > 1 ? `Item ${e.pos} of ${e.total}` : 'New item';
+  const cancel = e.mode === 'add' && e.total > 1 ? 'Stop' : 'Cancel';
+  const sugg = (used.length ? used : ['school', 'weekend', 'party']).filter(t => !e.tags.includes(t)).slice(0, 8);
+  const wsel = ['Light', 'Medium', 'Warm'].map((l, i) => `<button data-act="ed-warm" data-v="${i + 1}" aria-pressed="${e.warmth === i + 1}">${l}</button>`).join('');
+  const sw = (k, label, sub, on) => `<div class="row"><span class="grow">${label}${sub ? `<small>${sub}</small>` : ''}</span><button class="sw" role="switch" aria-checked="${on}" aria-label="${label}" data-act="ed-toggle" data-k="${k}"></button></div>`;
+  let rows = '';
+  if (cat === 'outer') rows += sw('wp', 'Rain-proof', 'Used on wet days', e.wp);
+  if (cat === 'shoes') rows += sw('wp', 'Waterproof', 'Used on wet days', e.wp);
+  if (cat === 'acc') rows += sw('warm', 'Keeps me warm', 'Scarf, hat or gloves', e.warmth === 3);
+  rows += sw('fav', 'Favorite', '', e.fav) + sw('wash', 'In the wash', 'Left out of outfit ideas until you switch it off', e.wash);
+  const skipBtn = e.mode === 'add' && S.queue.length ? '<button class="btn plain" data-act="ed-skip">Skip this photo</button>' : '';
+  const delBtn = e.mode === 'edit' ? `<button class="btn tint block danger" data-act="ed-delete">${e.confirmDel ? 'Tap again to delete' : 'Delete item'}</button>` : '';
+  return `<div class="sheet-h"><button class="btn plain" data-act="ed-cancel">${cancel}</button><h3>${title}</h3><button class="btn plain strong" data-act="ed-save">Save</button></div>
+  <div class="sheet-b">
+    <div class="photo"><img src="${e.url}" alt="Photo of this item"><button class="chip" data-act="ed-photo">${ic('camera', 'sm')} Change photo</button></div>
+    <section><input id="ed-name" class="field" type="text" placeholder="Name (optional)" maxlength="40" value="${esc(e.name)}" autocomplete="off"></section>
+    <section><p class="cap-h">Type</p><div class="chips wrap" style="padding-inline:16px">${CATS.map(k => `<button class="chip ${k.id === cat ? 'on' : ''}" data-act="ed-cat" data-v="${k.id}">${k.one}</button>`).join('')}</div></section>
+    <section><p class="cap-h">Color: ${c.name}</p><div class="group"><div class="swatches">${COLORS.map(k =>
+      `<button class="sw-c ${k.id === e.color ? 'on' : ''}" data-act="ed-color" data-v="${k.id}" style="--c:${k.hex}" aria-label="${k.name}" aria-pressed="${k.id === e.color}"></button>`).join('')}</div></div>
+      ${e.autoColor ? '<p class="cap-f">Picked from your photo. Tap another color if it is wrong.</p>' : ''}</section>
+    ${HINTS[cat] ? `<section><p class="cap-h">How warm is it?</p><div class="seg" role="group" aria-label="Warmth">${wsel}</div><p class="cap-f">${HINTS[cat]}</p></section>` : ''}
+    <section><p class="cap-h">Tags</p>
+      <div class="tagbox">${e.tags.map(t => `<span class="tag">${esc(t)}<button data-act="tag-del" data-v="${esc(t)}" aria-label="Remove ${esc(t)}">${ic('x', 'sm')}</button></span>`).join('')}
+        <input id="ed-tag" type="text" placeholder="${e.tags.length ? 'Add another' : 'school, party, cozy…'}" maxlength="24" enterkeyhint="done" autocomplete="off"></div>
+      ${sugg.length ? `<div class="chips wrap sugg">${sugg.map(t => `<button class="chip" data-act="tag-quick" data-v="${esc(t)}">${ic('plus', 'sm')} ${esc(t)}</button>`).join('')}</div>` : ''}</section>
+    <section><div class="group">${rows}</div></section>
+    ${skipBtn}${delBtn}
+  </div>`;
+}
+
+function addTag(raw) {
+  const t = String(raw || '').trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 24);
+  if (t && !E.tags.includes(t) && E.tags.length < 12) E.tags.push(t);
+}
+
+async function saveEditor() {
+  const tg = $('#ed-tag'); if (tg && tg.value.trim()) addTag(tg.value);
+  const cat = E.category;
+  const it = { id: E.id, name: E.name.trim(), category: cat, color: E.color, warmth: E.warmth, wp: (cat === 'outer' || cat === 'shoes') && !!E.wp,
+               tags: [...E.tags], fav: !!E.fav, wash: !!E.wash, photo: E.photo, thumb: E.thumb, addedAt: E.addedAt || Date.now() };
+  try { await DB.put('items', it); } catch (err) { toast("Couldn't save. Is the device storage full?"); return; }
+  const i = S.items.findIndex(x => x.id === it.id);
+  if (i >= 0) S.items[i] = it; else S.items.push(it);
+  const adding = E.mode === 'add';
+  if (adding) S.lastCat = cat;
+  if (adding && S.items.length === 1) persistStorage();
+  if (adding && S.queue.length) { nextInQueue(); }
+  else { const total = S.queueTotal; closeSheet(); toast(adding ? (total > 1 ? `Added ${total} items` : 'Added to your wardrobe') : 'Saved'); }
+  recompute(); render();
+}
+
+async function persistStorage() {
+  try { if (navigator.storage && navigator.storage.persist) S.persisted = await navigator.storage.persist(); } catch (e) { /* ignore */ }
+}
+
+/* ---------- backup ---------- */
+async function exportData() {
+  try {
+    const items = [];
+    for (const it of S.items) items.push({ ...it, photo: await blobToDataURL(it.photo), thumb: it.thumb ? await blobToDataURL(it.thumb) : null });
+    const blob = new Blob([JSON.stringify({ app: 'dressed', version: 1, exportedAt: new Date().toISOString(), items, history: S.history })], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `dressed-backup-${todayStr()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    toast('Backup saved to your downloads');
+  } catch (e) { toast("Couldn't make the backup"); }
+}
+async function importData(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.app !== 'dressed' || !Array.isArray(data.items)) throw new Error('format');
+    dropAllUrls();
+    for (const raw of data.items) {
+      const it = { ...raw, photo: dataURLToBlob(raw.photo), thumb: raw.thumb ? dataURLToBlob(raw.thumb) : dataURLToBlob(raw.photo) };
+      await DB.put('items', it);
+    }
+    for (const h of data.history || []) await DB.put('history', h);
+    S.items = await DB.all('items'); S.history = await DB.all('history');
+    recompute(); render(); toast(`Restored ${data.items.length} item${data.items.length === 1 ? '' : 's'}`);
+  } catch (e) { toast("That file isn't a Dressed backup"); }
+}
+
+/* ---------- actions ---------- */
+const A = {
+  tab(el) { S.tab = el.dataset.tab; S.confirmReset = false; window.scrollTo(0, 0); render(); },
+  occ(el) { S.tag = el.dataset.tag || null; S.shuffle = 0; recompute(); render(); },
+  opt(el) { S.idx = +el.dataset.i; render(); },
+  shuffle() { S.shuffle++; recompute(); render(); },
+  async approve() {
+    const o = S.sug && S.sug.ok && S.sug.list[S.idx]; if (!o) return;
+    const wx = curWx();
+    const rec = { date: todayStr(), ids: o.items.map(i => i.id), temp: Math.round(Engine.effectiveTemp(wx)), wet: !!wx.wet, at: Date.now() };
+    await DB.put('history', rec);
+    S.history = S.history.filter(h => h.date !== rec.date).concat(rec);
+    render(); window.scrollTo(0, 0); toast('Saved to your diary');
+  },
+  async undo() { await DB.del('history', todayStr()); S.history = S.history.filter(h => h.date !== todayStr()); recompute(); render(); },
+  'wx-edit'() { S.wxEdit = !S.wxEdit; render(); },
+  'wx-dec'() { ovStep(-1); },
+  'wx-inc'() { ovStep(1); },
+  'wx-cond'(el) { const w = curWx(); S.ov = S.ov || { feels: Math.round(Engine.effectiveTemp(w)), cond: 'dry' }; S.ov.cond = el.dataset.c; recompute(); render(); },
+  'wx-reset'() { S.ov = null; recompute(); render(); },
+  'wx-retry'() { loadWeather(true); },
+  'wx-refresh'() { toast('Checking the forecast'); loadWeather(true); },
+  add() { addMenu(); },
+  'add-lib'() { $('#fileLib').click(); },
+  'add-cam'() { $('#fileCam').click(); },
+  cat(el) { S.cat = el.dataset.cat; render(); },
+  wtag(el) { S.wtag = el.dataset.tag || null; render(); },
+  edit(el) { openEdit(el.dataset.id); },
+  'sheet-close'() { if (!E) closeSheet(); },
+  'ed-cancel'() { closeSheet(); },
+  'ed-skip'() { nextInQueue(); },
+  'ed-save'() { saveEditor(); },
+  'ed-photo'() { $('#fileOne').click(); },
+  'ed-cat'(el) { E.category = el.dataset.v; if (!E.warmTouched) E.warmth = DEFAULT_WARMTH[E.category]; renderEditor(true); },
+  'ed-color'(el) { E.color = el.dataset.v; E.autoColor = false; renderEditor(true); },
+  'ed-warm'(el) { E.warmth = +el.dataset.v; E.warmTouched = true; renderEditor(true); },
+  'ed-toggle'(el) {
+    const k = el.dataset.k;
+    if (k === 'warm') { E.warmth = E.warmth === 3 ? 1 : 3; E.warmTouched = true; } else E[k] = !E[k];
+    renderEditor(true);
+  },
+  'tag-del'(el) { E.tags = E.tags.filter(t => t !== el.dataset.v); renderEditor(true); },
+  'tag-quick'(el) { addTag(el.dataset.v); renderEditor(true); },
+  async 'ed-delete'() {
+    if (!E.confirmDel) { E.confirmDel = true; renderEditor(true); return; }
+    const id = E.id;
+    await DB.del('items', id); S.items = S.items.filter(i => i.id !== id); dropUrls(id);
+    closeSheet(); toast('Deleted'); recompute(); render();
+  },
+  'diary-open'(el) {
+    const date = el.dataset.date, h = S.history.find(x => x.date === date); if (!h) return;
+    const items = h.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean);
+    showSheet(`<div class="sheet-h"><span></span><h3>${esc(dayLabel(date))}</h3><button class="btn plain strong" data-act="sheet-close">Done</button></div>
+      <div class="sheet-b"><div class="card pad">${collage(items)}</div>
+      <button class="btn tint block danger" data-act="diary-del" data-date="${date}">Remove from diary</button></div>`);
+  },
+  async 'diary-del'(el) {
+    await DB.del('history', el.dataset.date); S.history = S.history.filter(h => h.date !== el.dataset.date);
+    closeSheet(); recompute(); render(); toast('Removed');
+  },
+  accent(el) { store.set('dressed.accent', el.dataset.k); applyAccent(); render(); },
+  export() { exportData(); },
+  import() { $('#fileImport').click(); },
+  async install() {
+    const ev = S.installEvt; if (!ev) return;
+    ev.prompt(); try { await ev.userChoice; } catch (e) { /* ignore */ }
+    S.installEvt = null; render();
+  },
+  async reset() {
+    if (!S.confirmReset) { S.confirmReset = true; render(); setTimeout(() => { if (S.confirmReset) { S.confirmReset = false; if (S.tab === 'settings') render(); } }, 4000); return; }
+    await DB.clear('items'); await DB.clear('history'); dropAllUrls();
+    S.items = []; S.history = []; S.confirmReset = false; S.tag = null; S.cat = 'all'; S.wtag = null;
+    recompute(); render(); toast('Everything deleted');
+  }
+};
+function ovStep(d) {
+  const w = curWx(); S.ov = S.ov || { feels: Math.round(Engine.effectiveTemp(w)), cond: w.snow ? 'snow' : w.wet ? 'rain' : 'dry' };
+  S.ov.feels = Math.max(-25, Math.min(40, S.ov.feels + d)); recompute(); render();
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const act = el.dataset.act;
+  if (E && act.startsWith('ed-') && act !== 'ed-delete') E.confirmDel = false;
+  if (A[act]) A[act](el, e);
+});
+document.addEventListener('input', e => { if (E && e.target.id === 'ed-name') E.name = e.target.value; });
+document.addEventListener('keydown', e => {
+  if (E && e.target.id === 'ed-tag' && (e.key === 'Enter' || e.key === ',')) {
+    e.preventDefault(); addTag(e.target.value); renderEditor(true);
+    const t = $('#ed-tag'); if (t) t.focus();
+  }
+});
+$('#fileLib').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; startAdd(f); });
+$('#fileCam').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; startAdd(f); });
+$('#fileOne').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f || !E) return;
+  try {
+    const p = await prepare(f); if (!E) return;
+    if (E.url) URL.revokeObjectURL(E.url);
+    E.photo = p.blob; E.thumb = p.thumb; E.url = URL.createObjectURL(p.blob);
+    if (E.autoColor) E.color = p.color;
+    renderEditor(true);
+  } catch (err) { toast("Couldn't read that photo"); }
+});
+$('#fileImport').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importData(f); });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installEvt = e; if (S.tab === 'settings') render(); });
+window.addEventListener('appinstalled', () => { S.installEvt = null; if (S.tab === 'settings') render(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (S.day !== todayStr()) { S.day = todayStr(); S.shuffle = 0; S.ov = null; S.wxEdit = false; loadWeather(true); }
+  else if (S.wx && S.wx.source === 'live' && Date.now() - S.wx.updated > 45 * 60e3) loadWeather(true);
+});
+
+/* ---------- start ---------- */
+(async function boot() {
+  applyAccent();
+  await DB.open();
+  try { S.items = await DB.all('items'); S.history = await DB.all('history'); } catch (e) { S.items = []; S.history = []; }
+  const dow = new Date().getDay();
+  if (dow >= 1 && dow <= 5) { const t = allTags().find(x => x.includes('school')); if (t) S.tag = t; }
+  try { if (navigator.storage && navigator.storage.persisted) S.persisted = await navigator.storage.persisted(); } catch (e) { /* ignore */ }
+  render();
+  loadWeather(false);
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.__dressed = { S, A, render, DB };
+})();
+})();
+
+</script>
+</body>
+</html>
